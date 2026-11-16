@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mi-karussell",
+    "date": "2026-11-18",
+    "time": "18:00",
+    "type": "carousel",
+    "files": ["karussell-01.jpg","karussell-02.jpg","karussell-03.jpg","karussell-04.jpg","karussell-05.jpg","karussell-06.jpg","karussell-07.jpg"],
+    "caption": "Draußen Regen, drinnen Decke 🌧️ Diese fünf Spiele brauchen keine schnellen Reflexe, nur Zeit und ein warmes Getränk. Speichern für den nächsten grauen Sonntag. Welches Spiel fehlt in der Liste?\n\nMia ist eine KI-Figur. #cozygames #stardewvalley #dorfromantik #gamingtipps #cozygaming"
+  },
+  {
+    "id": "fr-reel",
+    "date": "2026-11-20",
+    "time": "18:00",
+    "type": "reel",
+    "files": ["reel-freitag-diesoderdas.mp4"],
+    "caption": "Die wichtigste Frage der Woche: Stardew Valley oder Animal Crossing? 🌾🏝️ Ich weiß, für wen ich stimmen würde. Du auch? Ab in die Kommentare.\n\nMia ist eine KI-Figur. #stardewvalley #animalcrossing #cozygaming #diesoderdas"
+  },
+  {
+    "id": "sa-reel",
+    "date": "2026-11-21",
+    "time": "18:00",
+    "type": "reel",
+    "files": ["reel-samstag-setup.mp4"],
+    "caption": "Meine Ecke ☕🕯️ Drei Dinge machen ein Setup gemütlich: warmes Licht, eine Pflanze und Platz für die Tasse. Was steht bei dir immer neben der Tastatur?\n\nMia ist eine KI-Figur. #gamingsetup #cozysetup #desksetup #cozygaming"
+  },
+  {
+    "id": "so-reel",
+    "date": "2026-11-22",
+    "time": "18:00",
+    "type": "reel",
+    "files": ["reel-sonntag.mp4"],
+    "caption": "Sonntagsplan steht 😌 \"Nur noch ein Tag im Spiel\" ist die größte Lüge aller Cozy Gamer. Was spielst du heute?\n\nMia ist eine KI-Figur. #sonntag #cozygaming #cozygames #gamerlife"
+  }
+]
