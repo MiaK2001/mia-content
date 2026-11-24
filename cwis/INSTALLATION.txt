@@ -1,0 +1,28 @@
+CWIS – INSTALLATION AUF WINDOWS 11
+==================================
+
+1. Python installieren (falls noch nicht vorhanden):
+   https://www.python.org/downloads/  -> Version 3.11 oder neuer
+   WICHTIG: Beim Setup den Haken "Add python.exe to PATH" setzen.
+
+2. Die ZIP-Datei entpacken, z. B. nach  C:\CWIS
+   (Rechtsklick auf die ZIP -> "Alle extrahieren")
+
+3. Im entpackten Ordner doppelt auf  INSTALLIEREN.bat  klicken.
+   Das Skript:
+   - prüft nur lesend PC, Python und belegte Ports (Bericht: logs\bestandsaufnahme.txt)
+   - legt eine eigene Python-Umgebung NUR in diesem Ordner an
+   - führt die Tests aus und prüft die Datenquellen
+   - fragt, ob CWIS automatisch bei der Anmeldung starten soll
+
+4. Dashboard im Browser: http://127.0.0.1:8787
+
+Wenn Windows "Der Computer wurde durch Windows geschützt" anzeigt:
+"Weitere Informationen" -> "Trotzdem ausführen".
+
+Sicherheit: CWIS führt keine Trades aus, verwendet keine API-Schlüssel und
+verändert nichts am Trading-Bot. Belegt der Bot Port 8787, startet CWIS nicht;
+dann in config\config.toml unter [server] einen anderen Port eintragen.
+
+Entfernen: windows\autostart_entfernen.ps1 ausführen (Rechtsklick ->
+"Mit PowerShell ausführen") und danach den Ordner löschen.

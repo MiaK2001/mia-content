@@ -15,6 +15,8 @@ Derivatedaten und bewertet die Lage mit transparenten Scores, Warnstufen und ein
 
 Voraussetzung: Python ≥ 3.11 (python.org). Kein Docker, kein WSL, keine Administratorrechte.
 
+**Einfachster Weg:** Ordner entpacken und `INSTALLIEREN.bat` doppelklicken (siehe `INSTALLATION.txt`). Manuell:
+
 ```powershell
 cd <Pfad>\cwis
 powershell -ExecutionPolicy Bypass -File windows\1_bestandsaufnahme.ps1     # Phase 1: nur lesen (Ports, RAM, Python …)
