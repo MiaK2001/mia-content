@@ -51,6 +51,9 @@ async def check_sources(cfg) -> int:
     for chain, cc in (cfg.get("sources.evm") or {}).items():
         checks.append((f"EVM {chain}{'' if cc.get('enabled') else ' (deaktiviert)'}", http.post(
             cc["rpc_url"], json={"jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": []}, source="check", retries=0)))
+    if cfg.get("sources.tron.base_url"):
+        checks.append((f"Tron (TronGrid){'' if cfg.get('sources.tron.enabled') else ' (deaktiviert)'}",
+                       http.post(f"{cfg.get('sources.tron.base_url')}/wallet/getnowblock", source="check", retries=0)))
     ok = 0
     for name, coro in checks:
         try:
