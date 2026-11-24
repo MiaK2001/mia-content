@@ -119,3 +119,17 @@ def test_cex_label_file_loaded_and_consistent():
     assert lb.entity == "Binance" and lb.is_exchange and lb.confidence == "high"
     for e in json.loads((root / "wallet_labels_cex.json").read_text(encoding="utf-8"))["labels"]:
         assert e["category"] == "exchange" and e["entity"] and e["source"]
+
+
+def test_evm_exchange_scope_builds_topic_filter(registry, cfg):
+    from cwis.collectors.evm import EvmCollector
+    from cwis.health import HealthRegistry
+    c = EvmCollector("ethereum", HealthRegistry(), None, None, None, {
+        "rpc_url": "x", "native_symbol": "ETH", "tokens": [
+            {"symbol": "USDT", "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7", "decimals": 6, "scope": "exchange"},
+            {"symbol": "LINK", "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA", "decimals": 18}]},
+        registry=registry)
+    assert c.tokens_ex == ["0xdac17f958d2ee523a2206206994597c13d831ec7"]
+    assert c.tokens_all == ["0x514910771af9ca656af840dff83e8264ecf986ca"]
+    # 3 Börsen-Adressen + Null-Adresse aus dem Test-Registry, als 32-Byte-Topics
+    assert len(c.ex_topics) == 4 and all(len(t) == 66 for t in c.ex_topics)

@@ -93,10 +93,11 @@ scan_native = true              # ganze Blöcke laden (~2 GB/Tag Traffic); false
 max_blocks_per_cycle = 5         # je getLogs-Abfrage (max. 50 bei öffentlichen RPCs)
 # max_ranges_per_cycle = 4         # so viele Abfragen pro Zyklus, um Rückstände aufzuholen
 # max_catchup_blocks = 3000        # größerer Rückstand (lange Pause) wird übersprungen statt nachgeladen
+# scope = "exchange": nur Transfers von/zu bekannten Börsen-Wallets + Mint/Burn (spart bei Stablecoins ~90 % Traffic)
 tokens = [
-  { symbol = "USDT", address = "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals = 6 },
-  { symbol = "USDC", address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals = 6 },
-  { symbol = "DAI",  address = "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals = 18 },
+  { symbol = "USDT", address = "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals = 6, scope = "exchange" },
+  { symbol = "USDC", address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals = 6, scope = "exchange" },
+  { symbol = "DAI",  address = "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals = 18, scope = "exchange" },
   { symbol = "ETH",  address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals = 18, note = "WETH" },
   { symbol = "BTC",  address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals = 8,  note = "WBTC" },
   { symbol = "LINK", address = "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals = 18 },
@@ -116,15 +117,18 @@ confirmations = 3
 scan_native = false
 max_blocks_per_cycle = 40
 tokens = [  # on-chain geprüft (symbol/decimals) am 24.11.2026
-  { symbol = "USDT", address = "0x55d398326f99059fF775485246999027B3197955", decimals = 18 },
-  { symbol = "USDC", address = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals = 18 },
+  { symbol = "USDT", address = "0x55d398326f99059fF775485246999027B3197955", decimals = 18, scope = "exchange" },
+  { symbol = "USDC", address = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals = 18, scope = "exchange" },
   { symbol = "BNB",  address = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", decimals = 18, note = "WBNB" },
   { symbol = "BTC",  address = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", decimals = 18, note = "BTCB" },
   { symbol = "ETH",  address = "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", decimals = 18, note = "Binance-Peg ETH" },
 ]
 
 [sources.evm.arbitrum]
-enabled = true
+# Standardmäßig AUS: Der kostenlose Endpunkt liefert nur die letzten ~50 Blöcke (≈ 13 s) und drosselt stark;
+# im Test wurden dadurch über 2 400 Blöcke übersprungen. Mit eigenem RPC-Zugang (z. B. kostenloser Alchemy-
+# oder Infura-Schlüssel in rpc_url) zuverlässig nutzbar.
+enabled = false
 rpc_url = "https://arbitrum-one-rpc.publicnode.com"
 native_symbol = "ETH"
 interval_seconds = 5
@@ -132,8 +136,8 @@ confirmations = 10
 scan_native = false
 max_blocks_per_cycle = 45
 tokens = [  # on-chain geprüft am 24.11.2026
-  { symbol = "USDC", address = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", decimals = 6 },
-  { symbol = "USDT", address = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", decimals = 6, note = "USDT0" },
+  { symbol = "USDC", address = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", decimals = 6, scope = "exchange" },
+  { symbol = "USDT", address = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", decimals = 6, scope = "exchange", note = "USDT0" },
   { symbol = "ETH",  address = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", decimals = 18, note = "WETH" },
   { symbol = "ARB",  address = "0x912CE59144191C1204E64559FE8253a0e49E6548", decimals = 18 },
 ]
@@ -147,7 +151,7 @@ confirmations = 5
 scan_native = false
 max_blocks_per_cycle = 45
 tokens = [  # on-chain geprüft am 24.11.2026
-  { symbol = "USDC", address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals = 6 },
+  { symbol = "USDC", address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals = 6, scope = "exchange" },
   { symbol = "ETH",  address = "0x4200000000000000000000000000000000000006", decimals = 18, note = "WETH" },
   { symbol = "BTC",  address = "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf", decimals = 8, note = "cbBTC" },
 ]
@@ -161,8 +165,8 @@ confirmations = 10
 scan_native = false
 max_blocks_per_cycle = 20
 tokens = [  # on-chain geprüft am 24.11.2026
-  { symbol = "USDC", address = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", decimals = 6 },
-  { symbol = "USDT", address = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", decimals = 6, note = "USDT0" },
+  { symbol = "USDC", address = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359", decimals = 6, scope = "exchange" },
+  { symbol = "USDT", address = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", decimals = 6, scope = "exchange", note = "USDT0" },
   { symbol = "ETH",  address = "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", decimals = 18, note = "WETH" },
   { symbol = "POL",  address = "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", decimals = 18, note = "WPOL" },
 ]
@@ -176,8 +180,8 @@ confirmations = 3
 scan_native = false
 max_blocks_per_cycle = 20
 tokens = [  # on-chain geprüft am 24.11.2026
-  { symbol = "USDC", address = "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", decimals = 6 },
-  { symbol = "USDT", address = "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7", decimals = 6, note = "USDt" },
+  { symbol = "USDC", address = "0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E", decimals = 6, scope = "exchange" },
+  { symbol = "USDT", address = "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7", decimals = 6, scope = "exchange", note = "USDt" },
   { symbol = "ETH",  address = "0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB", decimals = 18, note = "WETH.e" },
   { symbol = "BTC",  address = "0x152b9d0FdC40C096757F570A51E494bd4b943E50", decimals = 8, note = "BTC.b" },
 ]

@@ -42,7 +42,7 @@ Ist Port 8787 belegt (z. B. durch den Trading-Bot), bricht CWIS ohne Änderungen
 |---|---|
 | Bitcoin | Bestätigte Blöcke via mempool.space, Wechselgeld-Heuristik, jeder relevante Output einzeln |
 | Ethereum | Native ETH-Transfers + ERC-20-Transfers (USDT, USDC, DAI, WETH, WBTC, LINK, UNI, PEPE, SHIB) via öffentlichem RPC, Reorg-Schutz über Bestätigungen |
-| BNB Chain, Arbitrum, Base, Polygon, Avalanche | Gleicher EVM-Collector: Stablecoins, Wrapped-ETH/-BTC, Wrapped-Native (alle Kontrakte on-chain geprüft) |
+| BNB Chain, Base, Polygon, Avalanche (Arbitrum vorbereitet, aus) | Gleicher EVM-Collector: Stablecoins (Börsenflüsse), Wrapped-ETH/-BTC, Wrapped-Native – alle Kontrakte on-chain geprüft |
 | Tron | USDT (TRC-20) über TronGrid, ohne API-Schlüssel |
 | Solana | **Nicht implementiert** – siehe [Einschränkungen](#bekannte-einschränkungen) |
 | Wallet-Zuordnung | ≈ 1 650 Börsen-Wallets aus offiziellen Reservenachweisen (Binance-PoR-Liste, DefiLlama-Adapters: OKX, KuCoin, HTX, Gate.io, Bitget, Bitfinex, Gemini) + kleine Handliste; Aktualisierung: `tools/import_cex_labels.py` |
@@ -121,6 +121,8 @@ Aufbewahrung. Ergebnisse des Testbetriebs mit Echtdaten: [docs/TESTBERICHT.md](d
   TronGrid ohne Schlüssel ist knapp limitiert – bei Rückstand zeigt die Health-Anzeige `lag_s`.
 * **Score-Gewichte** sind begründete Startwerte, noch **nicht** empirisch kalibriert. Ob Whale-Daten einen
   Zusatznutzen bieten, zeigt erst die historische Auswertung über Wochen (n ≥ 30 je Gruppe).
-* **Datenverbrauch:** siehe [docs/TESTBERICHT.md](docs/TESTBERICHT.md); größter Posten ist der vollständige
-  ETH-Blockscan (abschaltbar: `scan_native = false`). Jede Chain lässt sich einzeln in `config\config.toml` abschalten.
+* **Datenverbrauch:** gemessen ≈ 7,5 GB/Tag (komprimiert). Größte Posten sind komplette ETH- und BTC-Blöcke.
+  Sparmodus und Details: [docs/TESTBERICHT.md](docs/TESTBERICHT.md). Jede Chain lässt sich einzeln abschalten.
+* **Arbitrum** ist standardmäßig aus (kostenloser RPC zu stark begrenzt). **Stablecoins** auf EVM-Chains werden nur
+  für Börsen-Wallets und Mint/Burn erfasst (spart ~90 % Datenverkehr).
 * Die Windows-Skripte wurden in einer Linux-Entwicklungsumgebung geschrieben und dort **nicht** ausgeführt.

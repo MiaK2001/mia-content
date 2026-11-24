@@ -1,42 +1,51 @@
-# Testbericht – überwachter Testbetrieb (Phase 9)
+# Testbericht – überwachter Testbetrieb (Phase 9/10)
 
-**Datum:** 24.11.2026 · **Umgebung:** Linux-Cloud-Container (Entwicklung), Python 3.13, echte öffentliche Marktdaten.
+**Datum:** 24.11.2026 · **Umgebung:** Linux-Cloud-Container (Entwicklung), Python 3.13, echte öffentliche Daten.
 Der Testbetrieb auf deinem Windows-PC steht noch aus.
 
 ## Automatische Tests
 
-`pytest`: **49 bestanden, 0 fehlgeschlagen.** Dabei gefundene und behobene Fehler:
-* Ein Datenalter von exakt 0 Sekunden wurde als „unbekannt“ und damit als veraltet gewertet (`or 1e9`-Muster).
-* Uvicorn hatte ohne das Paket `websockets` keine WebSocket-Unterstützung (Live-Stream gab 404) → als Abhängigkeit ergänzt.
+`pytest`: **53 bestanden, 0 fehlgeschlagen.** Dabei gefundene und behobene Fehler:
+* Ein Datenalter von exakt 0 Sekunden wurde als „unbekannt“ und damit als veraltet gewertet.
+* Uvicorn hatte ohne das Paket `websockets` keine WebSocket-Unterstützung (Live-Stream gab 404).
+* Collectors verarbeiteten beim Start Blöcke, bevor Preise vorlagen → 142 Transfers gingen verloren. Jetzt warten sie.
+* PowerShell-Skripte ohne UTF-8-BOM wären unter Windows PowerShell 5.1 an Sonderzeichen gescheitert (statische Prüfung).
+* `--binance-only` im Label-Import hätte andere Börsen gelöscht.
 
-## Testbetrieb mit Echtdaten (Lauf 2, 20:23–20:39 UTC, sauberer Start)
+## Testläufe mit Echtdaten
 
-| Messgröße | Ergebnis |
-|---|---|
-| Datenquellen | Binance Spot, CoinGecko, OKX, mempool.space, Ethereum-RPC: alle **OK**, 0 Fehler nach Start |
-| Fehler beim Start | je 1 beabsichtigte Wartemeldung (BTC/ETH-Collector wartet auf erste Preise) |
-| Geprüfte Transfers | 37 130 |
-| Gespeichert (≥ 100 000 USD) | 549 · davon 19 über der dynamischen Whale-Schwelle |
-| Ohne verlässlichen Preis verworfen | 0 (vor der Korrektur: 142 beim Start) |
-| Duplikate | 0 in Lauf 2; nach einem Neustart in Lauf 1 wurden 28 Duplikate korrekt verworfen |
-| Erkannte Börsenflüsse | 5 Zuflüsse (7,1 Mio. USD), 5 Abflüsse (58,0 Mio. USD) |
-| Stablecoin-Mint/-Burn | 16 Mints / 6 Burns erkannt |
-| Warnungen | 1 (BTC GELB) – Filter verhinderte Wiederholungen bei 17 Analysezyklen |
-| Outcome-Tracking | 1- und 5-Minuten-Messungen erfolgreich abgeschlossen, längere Horizonte laufen |
-| RAM / CPU | ≈ 70 MB / nahe 0 % |
-| Datenbankwachstum | ≈ 0,04 MB pro Minute in der Startphase |
-| Port-Schutz | Belegter Port erkannt → Abbruch ohne Änderungen (Exit-Code 3) |
-| Dashboard | alle 11 Bereiche im Browser (Chromium) geprüft, keine JavaScript-Fehler |
+| Lauf | Dauer | Inhalt | Ergebnis |
+|---|---|---|---|
+| 2 | 16 Min. | BTC + ETH, kleine Labelliste | 37 130 Transfers geprüft, 549 gespeichert, 0 Fehler, 70 MB RAM |
+| 3 | 10 Min. | alle Chains, 1 650 Labels | 149 578 Transfers geprüft; Börsenflüsse auf allen Chains erkannt; Arbitrum- und Rückstandsproblem gefunden |
+| 4 | 12 Min. | Standardkonfiguration | 189 460 Transfers geprüft, 1 543 gespeichert, 0 ohne verlässlichen Preis, 80 MB RAM |
+| 6 | 6 Min. | mit Stablecoin-Börsenfilter | alle aktiven Quellen OK, kein Rückstand |
 
-Beispiel eines echten Treffers (Lauf 1): **14,38 Mio. USD ETH → Coinbase 10** als Börsenzufluss klassifiziert.
+Beispiele echter Treffer: 26,8 und 23,5 Mio. USD USDC von Coinbase abgehoben; 14,4 Mio. USD ETH auf Coinbase;
+Binance-, OKX-, KuCoin-, Bitfinex- und Gemini-Bewegungen auf Bitcoin; Binance-Flüsse auf BNB Chain, Tron und Avalanche.
+
+**Wallet-Abgleich:** 11 von 11 überprüfbaren Handlabels durch offizielle Reservelisten bestätigt, kein Widerspruch.
+
+## Datenverbrauch (gemessen, Lauf 6)
+
+Netzwerk gesamt: **≈ 7,5 GB/Tag** (komprimiert). Anteile (entpackt): Ethereum 5,5 GB (davon ≈ 4 GB komplette Blöcke für
+native ETH-Transfers), Bitcoin 2,5 GB, BNB 1,4 GB, Base 1,3 GB, Tron 1,0 GB, Binance/OKX je 0,3 GB, Polygon/Avalanche < 0,1 GB.
+Vor dem Stablecoin-Börsenfilter: ≈ 8,9 GB/Tag komprimiert (BNB allein 7,6 GB entpackt).
+
+**Sparmodus** (in `config\config.toml`): `[sources.evm.ethereum] scan_native = false` spart ≈ 4 GB entpackt
+(native ETH-Transfers entfallen, WETH bleibt), `[sources.tron] enabled = false` spart ≈ 1 GB.
+CPU-Last war durchgehend nahe 0 %, RAM 65–80 MB.
 
 ## Beobachtungen und offene Punkte
 
-* **Label-Abdeckung ist der Engpass:** 94 % der gespeicherten Transfers sind „Unbekannt → Unbekannt“. Ohne mehr
-  verifizierte Börsenadressen bleiben die Börsenfluss-Scores meist bei 0.
-* **BTC dauerhaft GELB:** Routinemäßige große BTC-Bewegungen zwischen unbekannten Wallets ergeben einen Whale Impact
-  von ≈ 26 (Schwelle GELB = 25). Nach einigen Tagen Historie greift die Komponente „Seltenheit“; danach Schwelle prüfen.
-* **OI-Veränderung** und **Seltenheit** brauchen 1 Stunde bzw. 24 Stunden Historie; bis dahin als fehlend gekennzeichnet.
-* Aussagen über einen **Zusatznutzen** der Whale-Daten sind frühestens nach mehreren Wochen möglich (n ≥ 30 je Gruppe).
-* **Nicht getestet:** Windows-Skripte (PowerShell/Batch), BSC/Arbitrum/Base/Polygon/Avalanche, `api.binance.com`
-  (hier geo-gesperrt), Dauerbetrieb über mehr als 30 Minuten.
+* **Arbitrum** ist standardmäßig aus: Der kostenlose Endpunkt liefert nur die letzten ~50 Blöcke (≈ 13 s); im Test
+  wurden über 2 400 Blöcke übersprungen. Mit eigenem (kostenlosem) RPC-Schlüssel nutzbar.
+* **Stablecoins** werden auf allen EVM-Chains nur noch für Börsen-Wallets und Mint/Burn erfasst (Ursache: Datenvolumen).
+  Große Stablecoin-Transfers zwischen unbekannten Wallets erscheinen dort nicht mehr (Tron: weiterhin alle).
+* **Label-Abdeckung:** 4,8 % der gespeicherten Transfers haben Börsenbezug (vorher < 1 %). Kunden-Einzahlungsadressen
+  und Coinbase/Kraken bleiben weitgehend unbekannt.
+* **CoinGecko** drosselte im Rechenzentrum zeitweise (HTTP 429); CWIS fällt dann auf Binance-Paarvolumen zurück.
+* **BTC-Warnstufe:** Mit Regelwerk v1.1 (unbekannt→unbekannt halb gewichtet) lag BTC meist bei GRÜN, mit echten
+  Binance-Abflüssen zeitweise bei GELB.
+* **Nicht getestet:** Ausführung der Windows-Skripte, Dauerbetrieb über mehrere Stunden, `api.binance.com` (hier geo-gesperrt).
+* Aussagen über einen **Zusatznutzen** für den Trading-Bot sind frühestens nach mehreren Wochen möglich (n ≥ 30 je Gruppe).

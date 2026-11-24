@@ -48,7 +48,8 @@ def parse_transfer_log(chain: str, log: dict, tokens: dict[str, dict], block_ts:
 
 
 class EvmCollector(Collector):
-    def __init__(self, chain: str, health, http: HttpClient, db: Database, pipeline: TransferPipeline, cfg_chain: dict):
+    def __init__(self, chain: str, health, http: HttpClient, db: Database, pipeline: TransferPipeline, cfg_chain: dict,
+                 registry=None):
         self.name = f"evm_{chain}"
         super().__init__(health)
         self.chain = chain
@@ -61,7 +62,19 @@ class EvmCollector(Collector):
         self.max_blocks = min(cfg_chain.get("max_blocks_per_cycle", 5), 50)  # öffentliche RPCs: max. ~50 Blöcke je getLogs
         self.max_ranges = cfg_chain.get("max_ranges_per_cycle", 4)          # Rückstand in mehreren Abfragen aufholen
         self.max_catchup = cfg_chain.get("max_catchup_blocks", 3000)
+        self.gap_blocks = 0
         self.tokens = {t["address"].lower(): t for t in cfg_chain.get("tokens", [])}
+        # scope = "exchange": nur Transfers von/zu bekannten Börsen-Wallets und Mint/Burn (Filter beim RPC-Server).
+        # Spart bei Stablecoins bis zu 98 % Datenverkehr; Transfers zwischen unbekannten Wallets entfallen dann.
+        self.tokens_all = [a for a, t in self.tokens.items() if t.get("scope", "all") != "exchange"]
+        self.tokens_ex = [a for a, t in self.tokens.items() if t.get("scope", "all") == "exchange"]
+        self.ex_topics: list[str] = []
+        if registry is not None and self.tokens_ex:
+            addrs = registry.addresses(chain, {"exchange", "null"})
+            self.ex_topics = ["0x" + "0" * 24 + a[2:].lower() for a in addrs if a.startswith("0x") and len(a) == 42]
+            if not self.ex_topics:
+                self.tokens_all += self.tokens_ex   # ohne bekannte Börsen-Wallets ungefiltert erfassen
+                self.tokens_ex = []
         self._ids = itertools.count(1)
         label = f"{chain.capitalize()} RPC (publicnode)"
         self.covers = {t["symbol"]: label for t in self.tokens.values()}
@@ -89,10 +102,18 @@ class EvmCollector(Collector):
             last = safe - 1   # Erststart oder lange Pause: nicht rückwirkend alles nachladen
         ranges = 0
         while safe > last and ranges < self.max_ranges:
-            last = await self._process_range(last + 1, min(safe, last + self.max_blocks))
+            try:
+                last = await self._process_range(last + 1, min(safe, last + self.max_blocks))
+            except HttpError as e:
+                if "archive" not in str(e).lower():
+                    raise
+                # Öffentlicher RPC liefert nur die jüngsten Blöcke: Rückstand überspringen und Lücke offen protokollieren
+                self.gap_blocks += safe - self.max_blocks - last
+                last = safe - self.max_blocks
+                self.health.error(self.name, f"Rückstand zu groß für kostenlosen RPC – {self.gap_blocks} Blöcke übersprungen")
             self.db.set_state(state_key, last)
             ranges += 1
-        self.health.ok(self.name, block=last, lag_blocks=latest - last)
+        self.health.ok(self.name, block=last, lag_blocks=latest - last, skipped_blocks=self.gap_blocks)
 
     async def _process_range(self, frm: int, to: int) -> int:
         block_ts: dict[int, int] = {}
@@ -112,9 +133,22 @@ class EvmCollector(Collector):
                         token_address=None, from_address=tx["from"], to_address=tx["to"],
                         amount=val / 1e18, observed_ms=ts, source=f"rpc:{self.chain}"))
         if self.tokens:
-            logs = await self.rpc_call("eth_getLogs", [{
-                "fromBlock": hex(frm), "toBlock": hex(to),
-                "address": list(self.tokens), "topics": [TRANSFER_TOPIC]}]) or []
+            base = {"fromBlock": hex(frm), "toBlock": hex(to)}
+            logs: list = []
+            if self.tokens_all:
+                logs += await self.rpc_call("eth_getLogs", [{**base, "address": self.tokens_all,
+                                                             "topics": [TRANSFER_TOPIC]}]) or []
+            if self.tokens_ex:
+                for topics in ([TRANSFER_TOPIC, self.ex_topics], [TRANSFER_TOPIC, None, self.ex_topics]):
+                    logs += await self.rpc_call("eth_getLogs", [{**base, "address": self.tokens_ex,
+                                                                 "topics": topics}]) or []
+                seen, uniq = set(), []
+                for lg in logs:   # Börse -> Börse taucht in beiden Abfragen auf
+                    k = (lg["transactionHash"], lg["logIndex"])
+                    if k not in seen:
+                        seen.add(k)
+                        uniq.append(lg)
+                logs = uniq
             missing = {int(l["blockNumber"], 16) for l in logs if not l.get("blockTimestamp")} - set(block_ts)
             for bn in sorted(missing):
                 hdr = await self.rpc_call("eth_getBlockByNumber", [hex(bn), False])

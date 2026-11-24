@@ -59,6 +59,7 @@ class HttpClient:
             follow_redirects=True,
         )
         self._penalty_until: dict[str, float] = {}
+        self.bytes_by_source: dict[str, int] = {}   # übertragene Bytes (komprimiert, sofern der Server gzip liefert)
 
     def _bucket(self, host: str) -> _Bucket:
         if host not in self._buckets:
@@ -89,7 +90,10 @@ class HttpClient:
                     self.health.error(source, str(err))
                     raise err
                 data = r.json()
-                self.health.ok(source, latency_ms=round(latency, 1))
+                nbytes = int(r.headers.get("content-length") or 0) or len(r.content)
+                self.bytes_by_source[source] = self.bytes_by_source.get(source, 0) + nbytes
+                self.health.ok(source, latency_ms=round(latency, 1),
+                               traffic_mb=round(self.bytes_by_source[source] / 1e6, 1))
                 return data
             except HttpError as e:
                 last_exc = e

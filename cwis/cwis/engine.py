@@ -68,7 +68,8 @@ class Engine:
             self.collectors.append(BitcoinCollector(self.health, self.http, self.db, self.pipeline, self.state, c))
         for chain, cc in (c.get("sources.evm") or {}).items():
             if cc.get("enabled"):
-                self.collectors.append(EvmCollector(chain, self.health, self.http, self.db, self.pipeline, cc))
+                self.collectors.append(EvmCollector(chain, self.health, self.http, self.db, self.pipeline, cc,
+                                                    registry=self.registry))
             else:
                 self.health.register(f"evm_{chain}", cc.get("interval_seconds", 10), "deaktiviert (Konfiguration)")
                 self.health.sources[f"evm_{chain}"].extra["disabled"] = True

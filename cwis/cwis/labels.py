@@ -48,6 +48,9 @@ class WalletRegistry:
             return UNKNOWN
         return self._map.get((chain, norm_address(chain, address)), UNKNOWN)
 
+    def addresses(self, chain: str, categories: set[str]) -> list[str]:
+        return sorted(a for (c, a), lbl in self._map.items() if c == chain and lbl.category in categories)
+
     def __len__(self) -> int:
         return len(self._map)
 
