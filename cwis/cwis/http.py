@@ -19,6 +19,12 @@ DEFAULT_RATES = {
     "www.okx.com": 4.0,              # öffentliche Endpunkte meist 10–20 Req/2s
     "mempool.space": 2.0,
     "ethereum-rpc.publicnode.com": 4.0,
+    "api.trongrid.io": 1.0,          # ohne Schlüssel sehr niedrige Limits
+    "bsc-rpc.publicnode.com": 3.0,
+    "arbitrum-one-rpc.publicnode.com": 3.0,
+    "base-rpc.publicnode.com": 3.0,
+    "polygon-bor-rpc.publicnode.com": 3.0,
+    "avalanche-c-chain-rpc.publicnode.com": 3.0,
 }
 
 

@@ -56,5 +56,5 @@ def compare_to_baseline(model_hits: list[int], baseline_hits: list[int]) -> dict
 
 
 MODEL_REGISTRY: dict[str, dict] = {
-    "rules-v1": {"status": "PRODUKTIV", "type": "regelbasiert", "beschreibung": "cwis/analysis/scoring.py"},
+    "rules-v1.1": {"status": "PRODUKTIV", "type": "regelbasiert", "beschreibung": "cwis/analysis/scoring.py"},
 }

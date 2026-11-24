@@ -21,7 +21,7 @@ Ein einzelner Python-Prozess (asyncio) – ressourcenschonend (im Test ≈ 70 MB
  FastAPI (127.0.0.1, nur GET) ─► Dashboard · REST /api/v1/* · WebSocket /ws/v1/signals
 ```
 
-## Scores (Regelwerk `rules-v1`, `cwis/analysis/scoring.py`)
+## Scores (Regelwerk `rules-v1.1`, `cwis/analysis/scoring.py`)
 
 Alle Komponenten sind auf 0..1 normiert (Sättigung `x/(x+h)`), Score = gewichteter Mittelwert × 100.
 Bezugsgrößen: *Stundenvolumen* = marktweites 24h-Volumen / 24 (CoinGecko, sonst Binance-Paar); *Tiefe* = Orderbuch ±1 %.
@@ -31,7 +31,7 @@ Bezugsgrößen: *Stundenvolumen* = marktweites 24h-Volumen / 24 (CoinGecko, sons
 | **Bearish** | Börsen-Nettozufluss (30) · Long-Liquidationen (15) · verkaufsseitiges Orderbuch (10) · Abwärtsdynamik mit Volumen (15) · überhitzte Long-Positionierung (Funding > 0, OI ↑) (10) · OI ↑ bei fallendem Kurs (10) · Stablecoins verlassen Börsen (10) |
 | **Bullish** | spiegelbildlich: Nettoabfluss (30) · Short-Liquidationen (15) · kaufseitiges Buch (10) · Aufwärtsdynamik (15) · überhitzte Shorts (10) · OI ↑ bei steigendem Kurs (10) · Stablecoins fließen auf Börsen (10) |
 | **Market Impact** | Börsenflüsse rel. zum Volumen (35) · größter Flow rel. zur Tiefe (25) · Liquidationen (15) · Volumenanomalie (15) · \|OI-Veränderung\| (10) |
-| **Whale Impact** | Whale-Volumen rel. zum Volumen (35) · Anzahl Whale-Wallets/Cluster (20) · Börsenbezug (15) · Größenklasse (10) · Seltenheit vs. 30-Tage-Historie (20); anschließend × (0,6 + 0,4 × Confidence/100) |
+| **Whale Impact** | Whale-Volumen rel. zum Volumen (35, Transfers unbekannt→unbekannt mit Faktor 0,5) · Anzahl Whale-Wallets/Cluster (20, unbekannte Wallets ohne Börsenbezug × 0,5) · Börsenbezug (15) · Größenklasse (10) · Seltenheit vs. 30-Tage-Historie (20); anschließend × (0,6 + 0,4 × Confidence/100) |
 | **Data Confidence** | Preis frisch & plausibel (30) · Orderbuch (15) · Derivate (20) · On-Chain-Collector aktuell (25) · Anteil gut gelabelter Börsenflüsse (10) |
 
 **Warnstufen:** ROT: Whale ≥ 70 ∧ Market ≥ 60 ∧ max(Bull, Bear) ≥ 55 ∧ Confidence ≥ 60 · ORANGE: Whale ≥ 50 ∧

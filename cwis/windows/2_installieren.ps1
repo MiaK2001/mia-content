@@ -1,4 +1,4 @@
-# CWIS Installation – eigenes, isoliertes Python-Venv im CWIS-Ordner.
+﻿# CWIS Installation - eigenes, isoliertes Python-Venv im CWIS-Ordner.
 # Installiert NICHTS systemweit und berührt den Trading-Bot nicht.
 # Aufruf:  powershell -ExecutionPolicy Bypass -File windows\2_installieren.ps1
 

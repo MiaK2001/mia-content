@@ -14,6 +14,8 @@ class Collector:
     name = "collector"
     interval_s: float = 60.0
     note: str | None = None
+    covers: dict = {}          # Asset -> Anzeigename der Quelle (für Datenqualität/Quellenangaben)
+    max_age_s: float = 180.0   # ab diesem Alter gelten die On-Chain-Daten als veraltet
 
     def __init__(self, health: HealthRegistry):
         self.health = health

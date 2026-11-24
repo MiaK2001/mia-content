@@ -13,6 +13,7 @@ from cwis.collectors.bitcoin import BitcoinCollector
 from cwis.collectors.derivatives import OkxDerivativesCollector
 from cwis.collectors.evm import EvmCollector
 from cwis.collectors.market import BinanceSpotCollector, CoinGeckoCollector
+from cwis.collectors.tron import TronCollector
 from cwis.config import PROJECT_ROOT, Config
 from cwis.db import Database, now_ms
 from cwis.health import HealthRegistry
@@ -37,7 +38,9 @@ class Engine:
         self.http = http or HttpClient(self.health)
         self.state = MarketState()
         self.registry = WalletRegistry.from_files(
-            PROJECT_ROOT / "data" / "wallet_labels.json", PROJECT_ROOT / "data" / "wallet_labels.local.json")
+            PROJECT_ROOT / "data" / "wallet_labels.json",
+            PROJECT_ROOT / "data" / "wallet_labels_cex.json",     # Reserven-Wallets der Börsen (tools/import_cex_labels.py)
+            PROJECT_ROOT / "data" / "wallet_labels.local.json")   # eigene Ergänzungen haben Vorrang
         self.recent_transfers: deque = deque(maxlen=300)
         self.subscribers: set[asyncio.Queue] = set()
         self.pipeline = TransferPipeline(self.db, self.registry, self.state, cfg, listeners=[self._on_transfer])
@@ -69,8 +72,10 @@ class Engine:
             else:
                 self.health.register(f"evm_{chain}", cc.get("interval_seconds", 10), "deaktiviert (Konfiguration)")
                 self.health.sources[f"evm_{chain}"].extra["disabled"] = True
-        for name, note in (("solana", "nicht implementiert – kein zuverlässiger kostenloser Echtzeit-Zugang ohne Schlüssel"),
-                           ("tron", "nicht implementiert – TronGrid benötigt für Dauerbetrieb einen (kostenlosen) Schlüssel")):
+        if c.get("sources.tron.enabled", False):
+            self.collectors.append(TronCollector(self.health, self.http, self.db, self.pipeline, c))
+        for name, note in (("solana", "nicht implementiert – Erfassung großer Transfers erfordert das Auswerten jedes "
+                                      "Blocks; öffentliche RPCs sind dafür zu stark limitiert (kostenpflichtige Anbieter nötig)"),):
             self.health.register(name, 60, note)
             self.health.sources[name].extra["disabled"] = True
 
@@ -96,10 +101,19 @@ class Engine:
                 pass  # langsamer Client – Nachricht verwerfen statt System zu blockieren
 
     # ---------- Analyse ----------
+    def _coverage(self) -> dict[str, list[tuple[str, float, str]]]:
+        """Welche Collectors liefern On-Chain-Daten für welches Asset (Name, max. Alter, Anzeigename)."""
+        cov: dict[str, list] = {}
+        for c in self.collectors:
+            for sym, label in getattr(c, "covers", {}).items():
+                cov.setdefault(sym, []).append((c.name, c.max_age_s, label))
+        return cov
+
     def _onchain_fresh(self, symbol: str) -> bool:
-        if symbol == "BTC":
-            return self.health.is_fresh("bitcoin_mempool", 1800)
-        return self.health.is_fresh("evm_ethereum", 180)
+        return any(self.health.is_fresh(n, age) for n, age, _ in self._coverage().get(symbol, []))
+
+    def _onchain_sources(self, symbol: str) -> list[str]:
+        return sorted({label for _, _, label in self._coverage().get(symbol, [])})
 
     def _whale_history(self, symbol: str) -> list[float]:
         rows = self.db.query(
@@ -116,7 +130,7 @@ class Engine:
         stables = self.cfg.stablecoins
         stable_rows = [r for r in rows if r["symbol"] in stables]
         stable_agg = scoring.aggregate(stable_rows)
-        stable_net = stable_agg.netflow_usd if self.health.is_fresh("evm_ethereum", 180) else None
+        stable_net = stable_agg.netflow_usd if any(self._onchain_fresh(x) for x in stables) else None
         clusters_all = find_clusters([r for r in rows if r["detected_ms"] >= now - cwin],
                                      self.cfg.get("analysis.cluster_min_wallets", 3))
         sources_base = ["Binance Spot (öffentlich)", "CoinGecko", "OKX Derivate (öffentlich)"]
@@ -134,7 +148,7 @@ class Engine:
                 clusters=[c for c in clusters_all if c["symbol"] == sym], stale_after_s=stale, now_ms=now)
             level, cond = scoring.classify_level(s)
             action = scoring.recommended_action(s, level)
-            srcs = sources_base + (["mempool.space (Bitcoin)"] if sym == "BTC" else []) + ["Ethereum RPC (publicnode)"]
+            srcs = sources_base + self._onchain_sources(sym)
             hist = outcomes.comparable(self.db, sym, event_type(s))
             analysis = narrative.build_analysis(s, level, hist, srcs)
             signal = bot_interface.build_signal(

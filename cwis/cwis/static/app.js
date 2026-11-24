@@ -34,6 +34,7 @@ async function api(path) {
 }
 function explorer(chain, tx) {
   if (chain === "bitcoin") return `https://mempool.space/tx/${tx}`;
+  if (chain === "tron") return `https://tronscan.org/#/transaction/${tx}`;
   const m = { ethereum: "https://etherscan.io/tx/", bsc: "https://bscscan.com/tx/", arbitrum: "https://arbiscan.io/tx/", base: "https://basescan.org/tx/", polygon: "https://polygonscan.com/tx/", avalanche: "https://snowtrace.io/tx/" };
   return (m[chain] || "#") + tx;
 }

@@ -12,20 +12,21 @@ gegenprüfen – sie ändern sich gelegentlich. CWIS bleibt mit eigenen Drosseln
 | **CoinGecko** `api.coingecko.com/api/v3` | Marktkapitalisierung, marktweites Volumen, Referenzpreis | kostenlos (Public/Demo) | ✅ erreichbar | Öffentliches Limit niedrig und schwankend; CWIS fragt alle 5 Min. in einer Sammelabfrage ab. Ein kostenloser Demo-Schlüssel erhöht die Stabilität (optional, nicht eingebaut). |
 | **mempool.space** `/api` | Bitcoin-Blöcke und Transaktionen | kostenlos | ✅ erreichbar | Kein fest dokumentiertes Limit; bei intensiver Nutzung wird Selbst-Hosting empfohlen. CWIS drosselt auf 1 Anfrage/s (≈ 130 Anfragen je Block, ≈ 19 000/Tag). |
 | **PublicNode** `ethereum-rpc.publicnode.com` | Ethereum-Blöcke, ERC-20-Logs | kostenlos, ohne Schlüssel | ✅ erreichbar | Fair-Use, Limits nicht veröffentlicht. Liefert praktischerweise `blockTimestamp` in Logs. Alternative: eigener Node oder kostenloser Schlüssel bei Infura/Alchemy. |
-| PublicNode BSC/Arbitrum/Base/Polygon/Avalanche | vorkonfiguriert, deaktiviert | kostenlos | ❌ nicht getestet (Netzwerkrichtlinie der Entwicklungsumgebung) | Vor Aktivierung mit `python -m cwis --check-sources` prüfen. Schnelle Chains: `scan_native = false`. |
+| PublicNode BSC/Arbitrum/Base/Polygon/Avalanche | Token-Transfers (getLogs) | kostenlos, ohne Schlüssel | ✅ erreichbar, im Dauertest | **getLogs max. 50 Blöcke je Abfrage** (größer = „Archive requests require a personal token“). Gemessene Blockraten: Base 5,2/s, Arbitrum 3,8/s, BSC 2,3/s, Polygon 0,7/s, Avalanche 0,5/s. Token-Kontrakte on-chain geprüft (`symbol()`, `decimals()`). |
+| **TronGrid** `api.trongrid.io` | USDT (TRC-20) Transfer-Events | kostenlos, ohne Schlüssel | ✅ erreichbar | ≈ 22 USDT-Transfers/s; Seiten à 200 Events; CWIS ≤ 1 Anfrage/s. Ohne Schlüssel niedrige Limits – Rückstand wird als `lag_s` angezeigt. |
+| **Binance Proof-of-Reserves** `www.binance.com/bapi/.../por/address` | Börsen-Wallet-Labels (Import-Skript) | kostenlos | ✅ erreichbar (1 104 Adressen) | Öffentlicher Endpunkt der Binance-Website (wird auch von DefiLlama genutzt). Nur beim manuellen Label-Import abgefragt, nicht im Dauerbetrieb. |
+| **DefiLlama-Adapters** (GitHub, MIT) | Börsen-Wallet-Labels (Import-Skript) | kostenlos | ✅ | Reserven-Adressen von OKX, KuCoin, HTX, Gate.io, Bitget, Bitfinex, Gemini u. a. |
 | **Blockchair** | – (nicht verwendet) | ohne Schlüssel 1 440 Anfragen/Tag | ❌ HTTP 430 „IP blacklisted“ | Aus geteilten Rechenzentrums-IPs gesperrt; für Dauerbetrieb nur mit (kostenpflichtigem) Schlüssel sinnvoll. |
 | **Etherscan API v2** | – (nicht verwendet) | kostenloser Schlüssel nötig | nicht getestet | Nützlich für Wallet-Historien/Labels. Bewusst nicht eingebaut, um ohne Schlüssel auszukommen. |
 | **DefiLlama** `stablecoins.llama.fi` | – (vorgesehen) | kostenlos | ✅ erreichbar | Stablecoin-Umlauf je Chain (Tageswerte) – Erweiterungskandidat für Phase 10. |
-| Solana public RPC | – | kostenlos | ❌ nicht freigegeben/ungetestet | Öffentlicher Endpunkt stark limitiert, laut Anbieter nicht für Produktion. |
-| TronGrid | – | kostenloser Schlüssel nötig | ❌ nicht freigegeben/ungetestet | Ohne Schlüssel sehr niedrige Limits. |
+| Solana public RPC | – (nicht verwendet) | kostenlos | nicht verwendet | Große Transfers nur durch Auswertung jedes Blocks (~2,5/s, je mehrere MB) auffindbar; öffentlicher Endpunkt laut Anbieter nicht für Produktion. Sinnvoll erst mit kostenpflichtigem Anbieter (z. B. Helius) – nur nach deiner Zustimmung. |
 
 ## Bewertung
 
 * **Echtzeit-Abdeckung kostenlos gut:** BTC und Ethereum (inkl. USDT/USDC) lassen sich ohne Schlüssel lückenlos und
   zeitnah verfolgen. Marktdaten und Derivate sind über Binance/OKX vollständig öffentlich.
-* **Hauptlücke Wallet-Zuordnung:** Die Aussagekraft von Börsenflüssen hängt fast vollständig von der Label-Qualität ab.
-  Kostenlos gibt es nur wenige gut belegte Börsenadressen (Explorer-Namensschilder, Proof-of-Reserves-Listen der
-  Börsen). Hier liegt der größte Hebel für Phase 10 – z. B. Import der öffentlich veröffentlichten
-  Proof-of-Reserves-Adresslisten der Börsen.
+* **Wallet-Zuordnung:** Umgesetzt über die Proof-of-Reserves-Listen der Börsen (≈ 1 650 Adressen). Die Abgleichprüfung
+  bestätigte 11 von 11 überprüfbaren Handlabels, kein Widerspruch. Lücken: Kunden-Einzahlungsadressen und Börsen ohne
+  Reserveliste (Coinbase, Kraken). Aktualisierung: `python tools/import_cex_labels.py <DefiLlama-Adapters-Klon>`.
 * **Historie:** Binance-Kerzen sind historisch kostenlos verfügbar (für Outcome-Auswertung ausreichend). Historische
   On-Chain-Whale-Daten müssten selbst aufgebaut werden – CWIS speichert ab dem ersten Tag alles dauerhaft.

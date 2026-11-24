@@ -122,3 +122,10 @@ def test_no_yellow_alert_without_whales(db, cfg):
     s = score([], make_market())
     s["whale_impact_score"] = 30
     assert am.maybe_alert(s, "YELLOW", {}, {}, NOW) is None
+
+
+def test_unknown_transfers_weigh_less_than_exchange_flows():
+    md = make_market()
+    unknown = score([tr(i, flow="UNKNOWN_TRANSFER", value=2e7) for i in range(4)], md)
+    exch = score([tr(i, flow="EXCHANGE_INFLOW", value=2e7) for i in range(4)], md)
+    assert exch["whale_impact_score"] > unknown["whale_impact_score"] > 0

@@ -58,6 +58,8 @@ class BitcoinCollector(Collector):
         self.interval_s = cfg.get("sources.bitcoin.interval_seconds", 60)
         self.delay = cfg.get("sources.bitcoin.request_delay_seconds", 1.0)
         self.min_usd = cfg.get("thresholds.min_store_usd")
+        self.covers = {"BTC": "mempool.space (Bitcoin)"}
+        self.max_age_s = 1800   # Blöcke im Schnitt alle 10 Min., Streuung groß
         self.note = "Bestätigte BTC-Blöcke (Wechselgeld-Heuristik, keine Mempool-Prognose)"
 
     async def run_once(self) -> None:

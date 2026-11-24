@@ -99,5 +99,23 @@ def test_liquidation_sums():
 def test_price_ready_gate(db, registry, state, cfg):
     p = TransferPipeline(db, registry, state, cfg)
     assert p.price_ready("ETH")
-    assert p.price_ready("BNB")              # nicht überwacht -> blockiert nicht
+    assert p.price_ready("DOGE")             # nicht überwacht -> blockiert nicht
     assert not p.price_ready("LINK")         # überwacht, aber noch kein Preis
+
+
+def test_tron_address_conversion():
+    from cwis.collectors.tron import hex_to_tron
+    assert hex_to_tron("0xa614f803b6fd780986a42c78ec9c7f77e6ded13c") == "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+
+
+def test_cex_label_file_loaded_and_consistent():
+    import json
+    from pathlib import Path
+    from cwis.labels import WalletRegistry
+    root = Path(__file__).resolve().parent.parent / "data"
+    reg = WalletRegistry.from_files(root / "wallet_labels.json", root / "wallet_labels_cex.json")
+    assert len(reg) > 1000
+    lb = reg.lookup("ethereum", "0x28C6c06298d514Db089934071355E5743bf21d60")   # in Binance-PoR bestätigt
+    assert lb.entity == "Binance" and lb.is_exchange and lb.confidence == "high"
+    for e in json.loads((root / "wallet_labels_cex.json").read_text(encoding="utf-8"))["labels"]:
+        assert e["category"] == "exchange" and e["entity"] and e["source"]

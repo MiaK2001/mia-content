@@ -1,4 +1,4 @@
-# CWIS Phase 1 – Bestandsaufnahme (rein lesend, verändert NICHTS)
+﻿# CWIS Phase 1 - Bestandsaufnahme (rein lesend, verändert NICHTS)
 # Aufruf:  powershell -ExecutionPolicy Bypass -File windows\1_bestandsaufnahme.ps1
 # Ermittelt Python, Hardware, freie Ressourcen und belegte Ports, damit CWIS
 # keinen Port und keine Ressourcen des bestehenden Trading-Bots beansprucht.
@@ -37,10 +37,10 @@ Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
 $port = 8787
 $busy = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
 Add "" ""
-Add "CWIS-Standardport $port" ($(if ($busy) { "BELEGT – bitte in config\config.toml einen anderen Port wählen" } else { "frei" }))
+Add "CWIS-Standardport $port" ($(if ($busy) { "BELEGT - bitte in config\config.toml einen anderen Port wählen" } else { "frei" }))
 
 Add "" ""
-Add "Laufende Python-Prozesse" "(nur Anzeige – werden nicht verändert)"
+Add "Laufende Python-Prozesse" "(nur Anzeige - werden nicht verändert)"
 Get-CimInstance Win32_Process -Filter "Name LIKE 'python%'" -ErrorAction SilentlyContinue | ForEach-Object {
   Add ("  PID " + $_.ProcessId) ($_.CommandLine)
 }

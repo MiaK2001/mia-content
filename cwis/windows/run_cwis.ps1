@@ -1,4 +1,4 @@
-# Dauerbetrieb mit automatischem Neustart nach Absturz/Netzausfall.
+﻿# Dauerbetrieb mit automatischem Neustart nach Absturz/Netzausfall.
 # Läuft mit niedriger Priorität (BelowNormal), damit der Trading-Bot Vorrang hat.
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root

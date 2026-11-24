@@ -42,8 +42,10 @@ Ist Port 8787 belegt (z. B. durch den Trading-Bot), bricht CWIS ohne Änderungen
 |---|---|
 | Bitcoin | Bestätigte Blöcke via mempool.space, Wechselgeld-Heuristik, jeder relevante Output einzeln |
 | Ethereum | Native ETH-Transfers + ERC-20-Transfers (USDT, USDC, DAI, WETH, WBTC, LINK, UNI, PEPE, SHIB) via öffentlichem RPC, Reorg-Schutz über Bestätigungen |
-| BNB Chain, Arbitrum, Base, Polygon, Avalanche | Gleicher EVM-Collector, vorkonfiguriert, **standardmäßig deaktiviert** (nicht getestet) |
-| Solana, Tron | **Nicht implementiert** – siehe [Einschränkungen](#bekannte-einschränkungen) |
+| BNB Chain, Arbitrum, Base, Polygon, Avalanche | Gleicher EVM-Collector: Stablecoins, Wrapped-ETH/-BTC, Wrapped-Native (alle Kontrakte on-chain geprüft) |
+| Tron | USDT (TRC-20) über TronGrid, ohne API-Schlüssel |
+| Solana | **Nicht implementiert** – siehe [Einschränkungen](#bekannte-einschränkungen) |
+| Wallet-Zuordnung | ≈ 1 650 Börsen-Wallets aus offiziellen Reservenachweisen (Binance-PoR-Liste, DefiLlama-Adapters: OKX, KuCoin, HTX, Gate.io, Bitget, Bitfinex, Gemini) + kleine Handliste; Aktualisierung: `tools/import_cex_labels.py` |
 | Börsenflüsse | Zuflüsse, Abflüsse, Netto; interne Umbuchungen und Transfers zwischen Börsen getrennt |
 | Dynamische Whale-Schwelle | 0,05 % des marktweiten 24h-Volumens, begrenzt durch Orderbuch-Tiefe, Floor/Ceiling, Börsenfaktor |
 | Clustering | Zeitliche Häufungen, Deduplizierung je Transaktion, Zusammenfassung von Adressen derselben Entität |
@@ -70,7 +72,9 @@ cwis/
 │  ├─ static/          Dashboard (Vanilla-JS, offline-fähig)
 │  ├─ engine.py        Orchestrierung · alerts.py · maintenance.py · db.py · config.py
 ├─ config/config.example.toml
-├─ data/wallet_labels.json      Startliste bekannter Adressen (nicht verifiziert)
+├─ data/wallet_labels.json      kleine Handliste (Coinbase, Kraken, DEX-Router, …)
+├─ data/wallet_labels_cex.json  Reserven-Wallets der Börsen (generiert)
+├─ tools/import_cex_labels.py   Label-Import (Binance-PoR + DefiLlama-Adapters, MIT)
 ├─ tests/                       pytest-Suite
 ├─ windows/                     Bestandsaufnahme, Installation, Autostart
 └─ docs/                        ARCHITEKTUR.md · DATENQUELLEN.md · INTEGRATION.md · TESTBERICHT.md
@@ -103,16 +107,20 @@ Aufbewahrung. Ergebnisse des Testbetriebs mit Echtdaten: [docs/TESTBERICHT.md](d
 
 ## Bekannte Einschränkungen
 
-* **Wallet-Labels:** Die Startliste ist klein (≈ 20 Adressen) und unverifiziert. Börsen nutzen Tausende
-  Einzahlungsadressen; ohne umfangreiche Label-Datenbank (meist kostenpflichtig, z. B. Arkham, Nansen) wird nur ein
-  Teil der echten Börsenflüsse erkannt. Die meisten Transfers erscheinen daher als „Unbekannt → Unbekannt“.
+* **Wallet-Labels:** ≈ 1 650 Reserven-Wallets großer Börsen sind bekannt. Nicht erfasst sind die Millionen
+  Kunden-Einzahlungsadressen sowie Börsen ohne veröffentlichte Reserveliste (z. B. Coinbase, Kraken – dort nur
+  wenige Handlabels). Ein Teil der echten Börsenflüsse bleibt daher „Unbekannt → Unbekannt“.
 * **Native ETH über Kontrakte** (interne Transaktionen) ist ohne Trace-API nicht sichtbar.
 * **Bitcoin:** Absender = größte Input-Adresse; die Wechselgeld-Heuristik ist einfach. Mempool (unbestätigt) wird nicht ausgewertet.
 * **DEX-Swaps** werden nur als „DEX-Interaktion“ erkannt (Router-Adressen), nicht als bestätigte Käufe/Verkäufe.
 * **Liquidationen** nur von OKX und nur die letzten ≤ 100 je Abfrage → Untergrenze.
 * **Orderbuch:** 1 000 Level reichen bei BTC/ETH oft nicht für ±1 % → als Untergrenze markiert. Orders können storniert werden.
-* **Solana/Tron:** kein zuverlässiger kostenloser Echtzeitzugang ohne Schlüssel; nicht implementiert.
+* **Solana:** nicht implementiert. Große Transfers ließen sich nur durch Auswerten jedes Blocks (≈ 2,5 Blöcke/s) finden;
+  öffentliche RPCs sind dafür zu stark limitiert, zuverlässige Anbieter sind kostenpflichtig.
+* **Schnelle EVM-Chains und Tron:** Native Coins (BNB, AVAX, POL, TRX) nur als Wrapped-Token sichtbar; Tron nur USDT.
+  TronGrid ohne Schlüssel ist knapp limitiert – bei Rückstand zeigt die Health-Anzeige `lag_s`.
 * **Score-Gewichte** sind begründete Startwerte, noch **nicht** empirisch kalibriert. Ob Whale-Daten einen
   Zusatznutzen bieten, zeigt erst die historische Auswertung über Wochen (n ≥ 30 je Gruppe).
-* **Datenverbrauch:** Vollständiger ETH-Blockscan ≈ 2 GB/Tag Download (abschaltbar: `scan_native = false`).
+* **Datenverbrauch:** siehe [docs/TESTBERICHT.md](docs/TESTBERICHT.md); größter Posten ist der vollständige
+  ETH-Blockscan (abschaltbar: `scan_native = false`). Jede Chain lässt sich einzeln in `config\config.toml` abschalten.
 * Die Windows-Skripte wurden in einer Linux-Entwicklungsumgebung geschrieben und dort **nicht** ausgeführt.

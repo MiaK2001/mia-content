@@ -58,9 +58,16 @@ class EvmCollector(Collector):
         self.interval_s = cfg_chain.get("interval_seconds", 12)
         self.confirmations = cfg_chain.get("confirmations", 2)
         self.scan_native = cfg_chain.get("scan_native", False)
-        self.max_blocks = cfg_chain.get("max_blocks_per_cycle", 5)
+        self.max_blocks = min(cfg_chain.get("max_blocks_per_cycle", 5), 50)  # öffentliche RPCs: max. ~50 Blöcke je getLogs
+        self.max_ranges = cfg_chain.get("max_ranges_per_cycle", 4)          # Rückstand in mehreren Abfragen aufholen
+        self.max_catchup = cfg_chain.get("max_catchup_blocks", 3000)
         self.tokens = {t["address"].lower(): t for t in cfg_chain.get("tokens", [])}
         self._ids = itertools.count(1)
+        label = f"{chain.capitalize()} RPC (publicnode)"
+        self.covers = {t["symbol"]: label for t in self.tokens.values()}
+        if self.scan_native:
+            self.covers[self.native] = label
+        self.max_age_s = max(180.0, 6 * self.interval_s)
         self.note = f"{chain}: " + ("native + " if self.scan_native else "") + f"{len(self.tokens)} Token-Kontrakte"
 
     async def rpc_call(self, method: str, params: list):
@@ -78,11 +85,16 @@ class EvmCollector(Collector):
         safe = latest - self.confirmations
         state_key = f"evm_last_block:{self.chain}"
         last = self.db.get_state(state_key)
-        if last is None or safe - last > 1000:
+        if last is None or safe - last > self.max_catchup:
             last = safe - 1   # Erststart oder lange Pause: nicht rückwirkend alles nachladen
-        if safe <= last:
-            return
-        frm, to = last + 1, min(safe, last + self.max_blocks)
+        ranges = 0
+        while safe > last and ranges < self.max_ranges:
+            last = await self._process_range(last + 1, min(safe, last + self.max_blocks))
+            self.db.set_state(state_key, last)
+            ranges += 1
+        self.health.ok(self.name, block=last, lag_blocks=latest - last)
+
+    async def _process_range(self, frm: int, to: int) -> int:
         block_ts: dict[int, int] = {}
         if self.scan_native:
             for bn in range(frm, to + 1):
@@ -114,5 +126,4 @@ class EvmCollector(Collector):
                 raw = parse_transfer_log(self.chain, lg, self.tokens, block_ts)
                 if raw:
                     self.pipeline.process(raw)
-        self.db.set_state(state_key, to)
-        self.health.ok(self.name, block=to, lag_blocks=latest - to)
+        return to

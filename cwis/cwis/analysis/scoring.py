@@ -17,7 +17,10 @@ from dataclasses import dataclass, field
 
 from cwis.state import DerivData, MarketData, age_s
 
-SCORING_VERSION = "rules-v1"
+SCORING_VERSION = "rules-v1.1"
+# v1.1: Transfers zwischen zwei unbekannten Wallets zählen im Whale Impact nur zur Hälfte
+#       (häufig interne Umbuchungen; geringster Informationsgehalt). Begründung: docs/ARCHITEKTUR.md
+UNKNOWN_WEIGHT = 0.5
 
 
 def _age(ts_ms, now_ms) -> float:
@@ -47,6 +50,8 @@ class FlowAggregate:
     other_usd: float = 0.0
     whale_count: int = 0
     whale_volume_usd: float = 0.0
+    whale_weighted_usd: float = 0.0     # gewichtet (unbekannt -> unbekannt = 0,5)
+    wallet_weight: float = 0.0
     whale_exchange_usd: float = 0.0
     largest_usd: float = 0.0
     max_tier: int = -1
@@ -87,9 +92,14 @@ def aggregate(rows: list[dict]) -> FlowAggregate:
                 seen_tx.add(key)
                 a.whale_count += 1
             a.whale_volume_usd += v
+            w = UNKNOWN_WEIGHT if ft == "UNKNOWN_TRANSFER" else 1.0
+            a.whale_weighted_usd += v * w
             if ft in ("EXCHANGE_INFLOW", "EXCHANGE_OUTFLOW"):
                 a.whale_exchange_usd += v
-            a.wallets.add(r.get("from_entity") or r.get("from_address"))
+            wkey = r.get("from_entity") or r.get("from_address")
+            if wkey not in a.wallets:
+                a.wallets.add(wkey)
+                a.wallet_weight += w
             a.largest_usd = max(a.largest_usd, v)
             a.max_tier = max(a.max_tier, r.get("size_tier") if r.get("size_tier") is not None else -1)
     return a
@@ -192,9 +202,9 @@ def compute_scores(
     rank = percentile_rank(whale_volume_history, agg.whale_volume_usd)
     max_cluster = max((c["wallets"] for c in clusters), default=0)
     whale = {
-        "Whale-Volumen relativ zum Volumen": (35, sat(agg.whale_volume_usd / hourly_vol, 0.2) if hourly_vol else
-                                              sat(agg.whale_volume_usd / 1e8, 1.0)),
-        "Anzahl aktiver Whale-Wallets": (20, sat(max(len(agg.wallets), max_cluster), 5)),
+        "Whale-Volumen relativ zum Volumen": (35, sat(agg.whale_weighted_usd / hourly_vol, 0.2) if hourly_vol else
+                                              sat(agg.whale_weighted_usd / 1e8, 1.0)),
+        "Anzahl aktiver Whale-Wallets": (20, sat(max(agg.wallet_weight, max_cluster), 5)),
         "Anteil Börsenbezug": (15, agg.whale_exchange_usd / agg.whale_volume_usd if agg.whale_volume_usd else 0.0),
         "Größenklasse": (10, (agg.max_tier + 1) / 8 if agg.max_tier >= 0 else 0.0),
         "Seltenheit vs. Historie": (20, rank if rank is not None else 0.0),   # ohne Historie kein Beitrag
