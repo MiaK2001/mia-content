@@ -1,0 +1,156 @@
+# CWIS Konfiguration
+# Kopiere diese Datei nach config/config.toml und passe sie an.
+# WICHTIG: Hier gehören KEINE Trading-API-Schlüssel hinein. CWIS lehnt den Start ab,
+# wenn Felder wie "api_secret", "secret_key" oder "passphrase" gefunden werden.
+
+[server]
+host = "127.0.0.1"      # nur lokal erreichbar – nicht ändern, solange die Integration deaktiviert ist
+port = 8787             # Startprüfung: ist der Port belegt, bricht CWIS ab (kein Konflikt mit dem Trading-Bot)
+
+[storage]
+db_path = "data/cwis.sqlite3"
+log_dir = "logs"
+retention_days_snapshots = 14   # Markt-/Derivate-Snapshots
+retention_days_transfers = 365  # Whale-Transfers
+retention_days_alerts = 730
+max_db_size_mb = 2048           # bei Überschreitung werden die ältesten Snapshots zuerst gelöscht
+
+[symbols]
+# Assets, für die Scores berechnet werden. market = Binance-Spot-Symbol, deriv = OKX-Swap-Instrument
+watch = [
+  { symbol = "BTC",  market = "BTCUSDT",  deriv = "BTC-USDT-SWAP",  coingecko = "bitcoin" },
+  { symbol = "ETH",  market = "ETHUSDT",  deriv = "ETH-USDT-SWAP",  coingecko = "ethereum" },
+  { symbol = "LINK", market = "LINKUSDT", deriv = "LINK-USDT-SWAP", coingecko = "chainlink" },
+  { symbol = "UNI",  market = "UNIUSDT",  deriv = "UNI-USDT-SWAP",  coingecko = "uniswap" },
+  { symbol = "PEPE", market = "PEPEUSDT", deriv = "PEPE-USDT-SWAP", coingecko = "pepe" },
+  { symbol = "SHIB", market = "SHIBUSDT", deriv = "SHIB-USDT-SWAP", coingecko = "shiba-inu" },
+]
+stablecoins = ["USDT", "USDC", "DAI"]
+
+[thresholds]
+# Absolute Größenklassen (USD) – nur zur Einordnung/Anzeige
+tiers_usd = [100000, 250000, 500000, 1000000, 5000000, 10000000, 50000000, 100000000]
+min_store_usd = 100000          # alles darunter wird verworfen
+# Dynamischer Whale-Schwellenwert = clamp(volume_factor * 24h-Volumen, floor, ceiling)
+volume_factor = 0.0005          # 0,05 % des 24h-Handelsvolumens
+exchange_factor_multiplier = 0.5  # Börsen-Transfers sind informativer -> halber Schwellenwert
+floor_usd = 100000
+ceiling_usd = 50000000
+stablecoin_threshold_usd = 5000000
+
+[analysis]
+interval_seconds = 60
+window_minutes = 60             # Betrachtungsfenster für Flows/Scores
+cluster_window_minutes = 10
+cluster_min_wallets = 3
+stale_after_seconds = 180       # Marktdaten älter als das gelten als veraltet
+signal_validity_minutes = 5
+
+[alerts]
+cooldown_minutes = { YELLOW = 60, ORANGE = 30, RED = 15 }
+rescore_delta = 15              # erneute Warnung innerhalb des Cooldowns nur bei Score-Sprung >= 15
+
+[history]
+horizons_minutes = [1, 5, 15, 30, 60, 240, 720, 1440]
+baseline_probe_minutes = 60     # unabhängige Referenzmessung (gegen Selektions-Bias)
+
+[sources.market]
+enabled = true
+# Auf einem deutschen Windows-PC funktioniert meist https://api.binance.com.
+# data-api.binance.vision ist Binances offizieller öffentlicher Marktdaten-Endpunkt.
+base_urls = ["https://data-api.binance.vision", "https://api.binance.com"]
+interval_seconds = 30
+depth_limit = 1000             # Gewicht 50 pro Abfrage; bei BTC/ETH deckt das ±1 % oft nicht ab -> als Untergrenze markiert
+
+[sources.coingecko]
+enabled = true
+base_url = "https://api.coingecko.com/api/v3"
+interval_seconds = 300          # Free-Tier: großzügig unter dem Rate-Limit bleiben
+
+[sources.derivatives]
+enabled = true
+base_url = "https://www.okx.com"
+interval_seconds = 60
+
+[sources.bitcoin]
+enabled = true
+base_url = "https://mempool.space/api"
+interval_seconds = 60
+request_delay_seconds = 1.0     # Drosselung beim Blockscan (~120 Anfragen pro Block)
+
+[sources.evm.ethereum]
+enabled = true
+rpc_url = "https://ethereum-rpc.publicnode.com"
+native_symbol = "ETH"
+interval_seconds = 12
+confirmations = 2
+scan_native = true              # ganze Blöcke laden (~2 GB/Tag Traffic); false = nur Token-Transfers
+max_blocks_per_cycle = 5
+tokens = [
+  { symbol = "USDT", address = "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals = 6 },
+  { symbol = "USDC", address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals = 6 },
+  { symbol = "DAI",  address = "0x6B175474E89094C44Da98b954EedeAC495271d0F", decimals = 18 },
+  { symbol = "ETH",  address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals = 18, note = "WETH" },
+  { symbol = "BTC",  address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", decimals = 8,  note = "WBTC" },
+  { symbol = "LINK", address = "0x514910771AF9Ca656af840dff83E8264EcF986CA", decimals = 18 },
+  { symbol = "UNI",  address = "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", decimals = 18 },
+  { symbol = "PEPE", address = "0x6982508145454Ce325dDbE47a25d4ec3d2311933", decimals = 18 },
+  { symbol = "SHIB", address = "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", decimals = 18 },
+]
+
+# Weitere EVM-Netzwerke: gleicher Collector, standardmäßig deaktiviert (in dieser
+# Entwicklungsumgebung nicht getestet). Für schnelle Chains scan_native = false lassen.
+[sources.evm.bsc]
+enabled = false
+rpc_url = "https://bsc-rpc.publicnode.com"
+native_symbol = "BNB"
+interval_seconds = 6
+confirmations = 3
+scan_native = false
+max_blocks_per_cycle = 10
+tokens = []
+
+[sources.evm.arbitrum]
+enabled = false
+rpc_url = "https://arbitrum-one-rpc.publicnode.com"
+native_symbol = "ETH"
+interval_seconds = 10
+confirmations = 10
+scan_native = false
+max_blocks_per_cycle = 200
+tokens = []
+
+[sources.evm.base]
+enabled = false
+rpc_url = "https://base-rpc.publicnode.com"
+native_symbol = "ETH"
+interval_seconds = 10
+confirmations = 5
+scan_native = false
+max_blocks_per_cycle = 50
+tokens = []
+
+[sources.evm.polygon]
+enabled = false
+rpc_url = "https://polygon-bor-rpc.publicnode.com"
+native_symbol = "POL"
+interval_seconds = 10
+confirmations = 10
+scan_native = false
+max_blocks_per_cycle = 20
+tokens = []
+
+[sources.evm.avalanche]
+enabled = false
+rpc_url = "https://avalanche-c-chain-rpc.publicnode.com"
+native_symbol = "AVAX"
+interval_seconds = 10
+confirmations = 3
+scan_native = false
+max_blocks_per_cycle = 20
+tokens = []
+
+[integration]
+# Die Trading-Bot-Integration ist hart deaktiviert (siehe cwis/integration/bot_interface.py).
+# Dieser Schalter ist nur informativ und kann die Sperre NICHT aufheben.
+status = "NICHT VERBUNDEN – TESTPHASE"

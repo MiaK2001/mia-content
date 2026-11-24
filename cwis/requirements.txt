@@ -1,0 +1,8 @@
+# CWIS – bewusst minimale Abhängigkeiten (alle kostenlos, Windows-kompatibel)
+fastapi>=0.110
+uvicorn>=0.27
+websockets>=12      # WebSocket-Unterstützung für uvicorn (Live-Stream)
+httpx>=0.27
+psutil>=5.9
+# nur für Tests
+pytest>=8
