@@ -147,7 +147,9 @@ class Engine:
                 "bearish": s["bearish_score"], "market_impact": s["market_impact_score"],
                 "data_confidence": s["data_confidence"], "whale_volume_usd": s["flows"]["whale_volume_usd"],
                 "level": level, "market_condition": cond, "data_status": s["data_status"],
-                "payload": json.dumps({"flows": s["flows"], "components": s["components"]}, ensure_ascii=False)})
+                # Details nur bei auffälliger Lage oder stündlich speichern (Speicherbedarf)
+                "payload": json.dumps({"flows": s["flows"], "components": s["components"]}, ensure_ascii=False)
+                if level != "GREEN" or (now // 60_000) % 60 == 0 else "{}"})
             alert = self.alerts.maybe_alert(s, level, analysis, signal, now)
             if alert:
                 self.tracker.schedule("alert", alert["id"], sym, alert["event_type"], bias(s), now,

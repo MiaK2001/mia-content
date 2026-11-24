@@ -120,3 +120,13 @@ def test_retention(db, cfg):
     res = run_retention(db, cfg)
     assert res["market_snapshots"] == 1
     assert db.one("SELECT COUNT(*) n FROM market_snapshots")["n"] == 1
+
+
+def test_retention_keeps_whales_longer(db, cfg):
+    base = {"chain": "ethereum", "block_number": 1, "symbol": "ETH", "amount": 1, "price_status": "OK",
+            "flow_type": "UNKNOWN_TRANSFER", "observed_ms": 0, "source": "t"}
+    old = NOW - 60 * 86_400_000
+    db.insert("transfers", {**base, "tx_hash": "a", "is_whale": 0, "detected_ms": old})
+    db.insert("transfers", {**base, "tx_hash": "b", "is_whale": 1, "detected_ms": old})
+    run_retention(db, cfg)
+    assert [r["tx_hash"] for r in db.query("SELECT tx_hash FROM transfers")] == ["b"]

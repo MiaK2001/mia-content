@@ -12,6 +12,7 @@ db_path = "data/cwis.sqlite3"
 log_dir = "logs"
 retention_days_snapshots = 14   # Markt-/Derivate-Snapshots
 retention_days_transfers = 365  # Whale-Transfers
+retention_days_small_transfers = 30  # Transfers unter der dynamischen Whale-Schwelle
 retention_days_alerts = 730
 max_db_size_mb = 2048           # bei Überschreitung werden die ältesten Snapshots zuerst gelöscht
 
